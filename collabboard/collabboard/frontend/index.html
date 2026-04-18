@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CollabBoard — Project Hub</title>
+<meta name="description" content="Real-time collaborative project management"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23c8ff57'/><rect x='4' y='4' width='11' height='11' rx='2' fill='%230f1a00'/><rect x='17' y='4' width='11' height='11' rx='2' fill='%230f1a00' opacity='.6'/><rect x='4' y='17' width='11' height='11' rx='2' fill='%230f1a00' opacity='.6'/><rect x='17' y='17' width='11' height='11' rx='2' fill='%230f1a00' opacity='.3'/></svg>"/>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500;600&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+/* ══ CSS VARIABLES ══════════════════════════════════════ */
+:root {
+  --bg: #080909;
+  --surface: #0f1011;
+  --surface2: #161719;
+  --surface3: #1d1e21;
+  --border: #212224;
+  --border2: #2d2f33;
+  --text: #e9eaec;
+  --text2: #9a9ba6;
+  --text3: #5a5b64;
+  --accent: #c8ff57;
+  --accent-dim: rgba(200,255,87,0.12);
+  --accent-text: #0f1a00;
+  --red: #ff4f4f;
+  --red-dim: rgba(255,79,79,0.12);
+  --blue: #4fa8ff;
+  --blue-dim: rgba(79,168,255,0.12);
+  --amber: #ffb347;
+  --amber-dim: rgba(255,179,71,0.12);
+  --purple: #b47dff;
+  --purple-dim: rgba(180,125,255,0.12);
+  --teal: #3de0c6;
+  --teal-dim: rgba(61,224,198,0.12);
+  --shadow: 0 4px 24px rgba(0,0,0,0.6);
+  --radius: 10px;
+  --r-sm: 6px;
+  --r-lg: 14px;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'Geist Mono', monospace;
+  --font-sans: 'Geist', sans-serif;
+  --transition: 0.16s cubic-bezier(0.4,0,0.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+::selection{background:var(--accent);color:var(--accent-text)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* ── UTILITIES ── */
+.hidden{display:none!important}
+.flex{display:flex}
+.items-center{align-items:center}
+.gap-8{gap:8px}
+.gap-12{gap:12px}
+.w-full{width:100%}
+
+/* ══ LOADING SCREEN ═══════════════════════════════════════ */
+#loading-screen{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  z-index:9999;flex-direction:column;gap:16px;
+  transition:opacity 0.4s;
+}
+.loading-logo{
+  width:48px;height:48px;background:var(--accent);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  animation:pulse 1.5s ease-in-out infinite;
+}
+.loading-logo svg{width:26px;height:26px}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(0.95);opacity:0.8}}
+.loading-text{font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:0.1em}
+
+/* ══ AUTH SCREEN ══════════════════════════════════════════ */
+#auth-screen{
+  min-height:100vh;display:none;align-items:center;
+  justify-content:center;position:relative;overflow:hidden;
+}
+#auth-screen.show{display:flex}
+.auth-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 90%,rgba(200,255,87,0.06) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 40% at 90% 10%,rgba(79,168,255,0.05) 0%,transparent 55%),
+    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,0.015) 40px),
+    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,0.015) 40px);
+  pointer-events:none;
+}
+.auth-card{
+  position:relative;z-index:1;width:400px;max-width:94vw;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:36px 32px;
+  box-shadow:var(--shadow),0 0 80px rgba(200,255,87,0.04);
+  animation:cardIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes cardIn{from{opacity:0;transform:scale(0.96) translateY(12px)}to{opacity:1;transform:none}}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.auth-logo-mark{width:34px;height:34px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.auth-logo-mark svg{width:18px;height:18px}
+.auth-logo-name{font-family:var(--font-serif);font-size:22px;color:var(--text);letter-spacing:-0.02em;font-style:italic}
+.auth-title{font-size:20px;font-weight:600;margin-bottom:6px;letter-spacing:-0.02em}
+.auth-sub{font-size:13px;color:var(--text2);margin-bottom:28px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-family:var(--font-mono);font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:7px}
+.form-input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px 12px;color:var(--text);font-family:var(--font-sans);font-size:14px;outline:none;transition:border-color var(--transition),box-shadow var(--transition)}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(200,255,87,0.1)}
+.form-input::placeholder{color:var(--text3)}
+.form-error{font-size:11px;color:var(--red);margin-top:5px;display:none}
+.form-error.show{display:block}
+.auth-btn{width:100%;padding:11px;background:var(--accent);color:var(--accent-text);border:none;border-radius:var(--r-sm);font-family:var(--font-sans);font-size:14px;font-weight:600;cursor:pointer;transition:opacity var(--transition),transform var(--transition);margin-top:4px;letter-spacing:-0.01em;position:relative;overflow:hidden}
+.auth-btn:hover{opacity:0.9;transform:translateY(-1px)}
+.auth-btn:active{transform:translateY(0);opacity:1}
+.auth-btn.loading{pointer-events:none;opacity:0.7}
+.auth-btn.loading::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.2) 50%,transparent 100%);animation:shimmerBtn 1s infinite}
+@keyframes shimmerBtn{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.auth-switch{margin-top:20px;text-align:center;font-size:13px;color:var(--text2)}
+.auth-switch a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:500}
+.auth-switch a:hover{text-decoration:underline}
+.avatar-upload-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:20px}
+.avatar-preview{width:72px;height:72px;border-radius:50%;background:var(--surface3);border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;overflow:hidden;transition:border-color var(--transition)}
+.avatar-preview:hover{border-color:var(--accent)}
+.avatar-preview img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.avatar-preview-hint{font-size:11px;color:var(--text3)}
+
+/* ══ MAIN APP ═════════════════════════════════════════════ */
+#app-screen{display:none;flex-direction:column;height:100vh}
+#app-screen.show{display:flex}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:54px;border-bottom:1px solid var(--border);background:rgba(8,9,9,0.92);backdrop-filter:blur(12px);flex-shrink:0;position:sticky;top:0;z-index:50}
+.topbar-left{display:flex;align-items:center;gap:20px}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;cursor:pointer}
+.logo-mark{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center}
+.logo-mark svg{width:14px;height:14px}
+.logo-name{font-family:var(--font-serif);font-size:17px;color:var(--text);letter-spacing:-0.02em;font-style:italic}
+.topbar-breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text3)}
+.breadcrumb-sep{color:var(--border2)}
+.breadcrumb-project{color:var(--text);font-weight:500}
+.topbar-right{display:flex;align-items:center;gap:10px;position:relative}
+
+/* notif bell */
+.notif-bell{width:32px;height:32px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;position:relative;transition:all var(--transition)}
+.notif-bell:hover{border-color:var(--border2);background:var(--surface3)}
+.notif-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-family:var(--font-mono);min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--bg);display:none}
+.notif-badge.show{display:flex}
+
+/* online presence */
+.online-presence{display:flex;align-items:center;gap:4px}
+.presence-av{width:26px;height:26px;border-radius:50%;border:2px solid var(--bg);margin-left:-6px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-mono);overflow:hidden;background:var(--surface3);color:var(--text2)}
+.presence-av:first-child{margin-left:0}
+.presence-av img{width:100%;height:100%;object-fit:cover}
+.presence-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* user chip */
+.user-chip{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:1px solid var(--border);border-radius:24px;background:var(--surface2);cursor:pointer;transition:border-color var(--transition),background var(--transition);position:relative}
+.user-chip:hover{border-color:var(--border2);background:var(--surface3)}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-text);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--font-mono);overflow:hidden;flex-shrink:0}
+.user-avatar img{width:100%;height:100%;object-fit:cover}
+.user-name{font-size:13px;font-weight:500;color:var(--text);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* user dropdown */
+.user-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;min-width:210px;box-shadow:var(--shadow);display:none;z-index:200;animation:dropIn 0.15s ease}
+@keyframes dropIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.user-dropdown.open{display:block}
+.dropdown-header{padding:8px 10px 12px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.dropdown-user-name{font-weight:600;font-size:14px}
+.dropdown-user-email{font-size:11px;color:var(--text2);margin-top:2px;font-family:var(--font-mono)}
+.dropdown-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;font-size:13px;color:var(--text2);transition:background var(--transition),color var(--transition)}
+.dropdown-item:hover{background:var(--surface3);color:var(--text)}
+.dropdown-item.danger:hover{background:var(--red-dim);color:var(--red)}
+.dropdown-icon{width:16px;font-size:14px;flex-shrink:0;text-align:center}
+.dropdown-sep{height:1px;background:var(--border);margin:6px 0}
+
+/* notif dropdown */
+.notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:340px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);box-shadow:var(--shadow);display:none;z-index:200;overflow:hidden;animation:dropIn 0.15s ease}
+.notif-dropdown.open{display:block}
+.notif-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border)}
+.notif-title{font-weight:600;font-size:13px}
+.notif-mark-all{font-size:11px;color:var(--accent);cursor:pointer;font-family:var(--font-mono)}
+.notif-mark-all:hover{text-decoration:underline}
+.notif-list{max-height:320px;overflow-y:auto}
+.notif-item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--transition)}
+.notif-item:hover{background:var(--surface3)}
+.notif-item.unread{background:rgba(200,255,87,0.03)}
+.notif-item-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.notif-item-body{flex:1;min-width:0}
+.notif-item-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notif-item-text{font-size:11px;color:var(--text2);margin-top:2px;line-height:1.4}
+.notif-item-time{font-size:10px;color:var(--text3);margin-top:4px;font-family:var(--font-mono)}
+.notif-unread-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:6px}
+.notif-empty{padding:32px;text-align:center;color:var(--text3);font-size:13px}
+
+/* ── BUTTONS ── */
+.btn{font-family:var(--font-sans);font-size:13px;font-weight:500;padding:7px 13px;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all var(--transition);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--surface3);color:var(--text);border-color:var(--border2)}
+.btn-primary{background:var(--accent);border-color:transparent;color:var(--accent-text);font-weight:600}
+.btn-primary:hover{opacity:0.88;color:var(--accent-text)}
+.btn-ghost{background:transparent;border-color:transparent}
+.btn-ghost:hover{background:var(--surface2)}
+.btn-danger{color:var(--red)}
+.btn-danger:hover{background:var(--red-dim);border-color:transparent}
+.btn-sm{padding:4px 9px;font-size:12px}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+
+/* ══ PROJECTS HUB ═════════════════════════════════════════ */
+#projects-hub{flex:1;overflow-y:auto;padding:32px 32px 60px;display:none}
+#projects-hub.show{display:block}
+.hub-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:28px}
+.hub-title{font-family:var(--font-serif);font-size:30px;font-style:italic;color:var(--text);letter-spacing:-0.03em;line-height:1.1}
+.hub-subtitle{font-size:13px;color:var(--text2);margin-top:4px}
+.hub-section-label{font-family:var(--font-mono);font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;margin-top:24px}
+.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.project-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;cursor:pointer;transition:border-color var(--transition),transform var(--transition),box-shadow var(--transition);position:relative;overflow:hidden}
+.project-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--project-color,var(--accent));opacity:0.7}
+.project-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.4)}
+.project-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.project-icon{width:38px;height:38px;border-radius:9px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.project-card-menu{opacity:0;transition:opacity var(--transition)}
+.project-card:hover .project-card-menu{opacity:1}
+.project-name{font-size:15px;font-weight:600;margin-bottom:5px;letter-spacing:-0.01em}
+.project-desc{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:14px;min-height:36px}
+.project-stats{display:flex;gap:14px}
+.project-stat{font-size:11px;color:var(--text3);font-family:var(--font-mono)}
+.project-stat strong{color:var(--text2)}
+.project-members{display:flex;margin-top:14px}
+.project-member-av{width:22px;height:22px;border-radius:50%;border:2px solid var(--surface);margin-left:-6px;font-size:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-mono);overflow:hidden;background:var(--surface3)}
+.project-member-av:first-child{margin-left:0}
+.project-member-av img{width:100%;height:100%;object-fit:cover}
+.project-card-new{border-style:dashed;border-color:var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:160px;color:var(--text3);font-size:13px}
+.project-card-new::before{display:none}
+.project-card-new:hover{color:var(--text2)}
+.new-project-plus{width:36px;height:36px;border-radius:9px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:20px;transition:background var(--transition),border-color var(--transition)}
+.project-card-new:hover .new-project-plus{background:var(--surface2);border-color:var(--accent);color:var(--accent)}
+.project-date{font-size:10px;color:var(--text3);font-family:var(--font-mono);margin-top:10px}
+.project-role-badge{font-size:9px;font-family:var(--font-mono);padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.05em;background:var(--surface3);color:var(--text3)}
+.project-role-badge.guest{background:var(--blue-dim);color:var(--blue)}
+.progress-bar-wrap{background:var(--surface3);border-radius:3px;height:4px;overflow:hidden;margin-top:12px}
+.progress-bar{height:100%;background:var(--accent);border-radius:3px;transition:width 0.5s cubic-bezier(0.4,0,0.2,1)}
+
+/* ══ BOARD VIEW ═══════════════════════════════════════════ */
+#board-screen{display:none;flex-direction:column;height:100%;overflow:hidden}
+#board-screen.show{display:flex}
+.board-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0;gap:12px}
+.board-toolbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.board-toolbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.filter-chip{font-family:var(--font-mono);font-size:10px;padding:4px 11px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;transition:all var(--transition);letter-spacing:0.04em;text-transform:uppercase}
+.filter-chip.active,.filter-chip:hover{background:var(--surface2);color:var(--text);border-color:var(--border2)}
+.filter-chip.active{border-color:var(--accent);color:var(--accent)}
+.stats-pills{display:flex;gap:8px}
+.stat-pill{font-family:var(--font-mono);font-size:10px;padding:4px 10px;border-radius:20px;background:var(--surface2);color:var(--text3)}
+.stat-pill strong{color:var(--text)}
+.board-area{display:flex;gap:16px;padding:16px 24px;flex:1;overflow-x:auto;overflow-y:hidden;align-items:flex-start}
+.column{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);min-width:270px;width:270px;flex-shrink:0;display:flex;flex-direction:column;max-height:100%;transition:outline var(--transition)}
+.col-header{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px;flex-shrink:0}
+.col-title-wrap{display:flex;align-items:center;gap:8px}
+.col-indicator{width:8px;height:8px;border-radius:50%}
+.col-todo .col-indicator{background:var(--text3)}
+.col-inprog .col-indicator{background:var(--blue)}
+.col-review .col-indicator{background:var(--amber)}
+.col-done .col-indicator{background:var(--teal)}
+.col-label{font-size:12px;font-weight:600;letter-spacing:0.02em;text-transform:uppercase;font-family:var(--font-mono)}
+.col-count{font-size:11px;font-family:var(--font-mono);background:var(--surface3);padding:2px 7px;border-radius:10px;color:var(--text3)}
+.col-body{padding:0 10px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;padding-bottom:8px;min-height:40px}
+.col-add-btn{margin:0 10px 12px;padding:8px;background:transparent;border:1px dashed var(--border);border-radius:var(--r-sm);color:var(--text3);cursor:pointer;font-family:var(--font-sans);font-size:12px;display:flex;align-items:center;gap:6px;transition:all var(--transition);flex-shrink:0}
+.col-add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+
+/* ── TASK CARDS ── */
+.card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;transition:border-color var(--transition),transform var(--transition),box-shadow var(--transition);user-select:none;position:relative;overflow:hidden}
+.card:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.3)}
+.card.dragging{opacity:0.4;transform:rotate(1deg)}
+.card.drag-over{outline:2px solid var(--accent);outline-offset:2px}
+.card-cover{height:4px;margin:-12px -12px 10px;border-radius:var(--radius) var(--radius) 0 0}
+.card-title{font-size:13px;font-weight:500;line-height:1.4;margin-bottom:8px;color:var(--text)}
+.card-desc{font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.tag{font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;font-family:var(--font-mono);letter-spacing:0.03em;text-transform:uppercase}
+.tag-frontend{background:var(--blue-dim);color:var(--blue)}
+.tag-backend{background:var(--purple-dim);color:var(--purple)}
+.tag-design{background:var(--teal-dim);color:var(--teal)}
+.tag-bug{background:var(--red-dim);color:var(--red)}
+.tag-feature{background:var(--accent-dim);color:var(--accent)}
+.tag-urgent{background:var(--amber-dim);color:var(--amber)}
+.tag-api{background:var(--surface3);color:var(--text3)}
+.card-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-priority{display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--font-mono);color:var(--text3)}
+.priority-pip{width:6px;height:6px;border-radius:50%}
+.p-low .priority-pip{background:var(--teal)}
+.p-medium .priority-pip{background:var(--amber)}
+.p-high .priority-pip{background:var(--red)}
+.p-low{color:var(--teal)}
+.p-medium{color:var(--amber)}
+.p-high{color:var(--red)}
+.card-right{display:flex;align-items:center;gap:6px}
+.card-meta{display:flex;align-items:center;gap:8px}
+.card-checklist-badge{font-size:9px;font-family:var(--font-mono);color:var(--text3);display:flex;align-items:center;gap:3px}
+.card-comment-badge{font-size:9px;font-family:var(--font-mono);color:var(--text3);display:flex;align-items:center;gap:3px}
+.card-assignee-av{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;font-family:var(--font-mono);overflow:hidden;flex-shrink:0}
+.card-assignee-av img{width:100%;height:100%;object-fit:cover}
+.card-delete{opacity:0;width:20px;height:20px;border-radius:4px;border:none;background:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:opacity var(--transition),background var(--transition),color var(--transition)}
+.card:hover .card-delete{opacity:1}
+.card-delete:hover{background:var(--red-dim);color:var(--red)}
+.empty-col{text-align:center;padding:28px 14px;color:var(--text3);font-size:11px;line-height:1.7;font-family:var(--font-mono)}
+.due-chip{font-size:9px;font-family:var(--font-mono);padding:2px 7px;border-radius:3px;background:var(--surface3);color:var(--text3)}
+.due-chip.overdue{background:var(--red-dim);color:var(--red)}
+.due-chip.soon{background:var(--amber-dim);color:var(--amber)}
+.due-chip.today{background:var(--blue-dim);color:var(--blue)}
+
+/* ══ MODALS ═══════════════════════════════════════════════ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-lg);padding:28px;width:440px;max-width:100%;box-shadow:var(--shadow);animation:modalIn 0.2s cubic-bezier(0.34,1.56,0.64,1);max-height:90vh;overflow-y:auto}
+.modal-wide{width:600px}
+.modal-sm{width:340px}
+@keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.modal-title{font-size:15px;font-weight:600;letter-spacing:-0.01em}
+.modal-close{width:28px;height:28px;border-radius:var(--r-sm);border:none;background:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:background var(--transition),color var(--transition)}
+.modal-close:hover{background:var(--surface3);color:var(--text)}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}
+.modal-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px}
+.modal-tab{padding:8px 16px;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all var(--transition);margin-bottom:-1px}
+.modal-tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.modal-tab:hover:not(.active){color:var(--text2)}
+
+/* form elements */
+.tag-picker{display:flex;flex-wrap:wrap;gap:6px}
+.tag-opt{font-size:9px;font-weight:600;padding:4px 10px;border-radius:3px;cursor:pointer;font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;opacity:0.4;border:1px solid transparent;transition:opacity var(--transition),border-color var(--transition)}
+.tag-opt.selected{opacity:1;border-color:currentColor}
+.picker-row{display:flex;gap:6px;flex-wrap:wrap}
+.picker-opt{font-size:12px;padding:6px 13px;border-radius:var(--r-sm);cursor:pointer;border:1px solid var(--border);background:var(--bg);color:var(--text2);font-family:var(--font-sans);transition:all var(--transition)}
+.picker-opt.selected{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.swatch-row{display:flex;gap:8px;flex-wrap:wrap}
+.swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform var(--transition),border-color var(--transition)}
+.swatch:hover{transform:scale(1.15)}
+.swatch.selected{border-color:white}
+select.form-input{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%235a5b64' stroke-width='1.5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+textarea.form-input{resize:vertical;min-height:60px}
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* ── TASK DETAIL MODAL ── */
+.task-detail-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.task-detail-title-input{flex:1;background:transparent;border:none;font-size:17px;font-weight:600;color:var(--text);font-family:var(--font-sans);outline:none;padding:0;letter-spacing:-0.01em;width:100%}
+.task-detail-title-input:focus{background:var(--surface3);padding:4px 8px;border-radius:var(--r-sm);margin:-4px -8px}
+.task-detail-meta{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:var(--r-sm)}
+.task-meta-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+.task-meta-label{font-family:var(--font-mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em}
+.task-meta-val{font-size:12px;color:var(--text)}
+
+/* checklist */
+.checklist-wrap{display:flex;flex-direction:column;gap:6px}
+.checklist-item{display:flex;align-items:center;gap:8px;padding:5px 0}
+.checklist-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.checklist-item-text{font-size:13px;flex:1;color:var(--text);background:transparent;border:none;outline:none;font-family:var(--font-sans)}
+.checklist-item.done-item .checklist-item-text{text-decoration:line-through;color:var(--text3)}
+.checklist-item-del{opacity:0;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;transition:opacity var(--transition)}
+.checklist-item:hover .checklist-item-del{opacity:1}
+.checklist-progress{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.checklist-progress-bar{flex:1;height:3px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.checklist-progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width 0.3s ease}
+.checklist-add{display:flex;gap:6px;margin-top:6px}
+.checklist-add input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 10px;color:var(--text);font-size:12px;font-family:var(--font-sans);outline:none}
+.checklist-add input:focus{border-color:var(--accent)}
+
+/* comments */
+.comments-list{display:flex;flex-direction:column;gap:12px;max-height:280px;overflow-y:auto}
+.comment-item{display:flex;gap:10px}
+.comment-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:var(--font-mono);overflow:hidden;background:var(--surface3)}
+.comment-av img{width:100%;height:100%;object-fit:cover}
+.comment-body{flex:1;min-width:0}
+.comment-header{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.comment-name{font-size:12px;font-weight:600}
+.comment-time{font-size:10px;color:var(--text3);font-family:var(--font-mono)}
+.comment-edited{font-size:9px;color:var(--text3);font-family:var(--font-mono)}
+.comment-text{font-size:12px;color:var(--text2);line-height:1.5;word-break:break-word}
+.comment-reactions{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.reaction-btn{font-size:11px;padding:2px 7px;border-radius:10px;border:1px solid var(--border);background:var(--surface3);cursor:pointer;display:flex;align-items:center;gap:3px;color:var(--text2);transition:all var(--transition)}
+.reaction-btn:hover,.reaction-btn.mine{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+.comment-actions{display:flex;gap:6px;margin-top:4px;opacity:0;transition:opacity var(--transition)}
+.comment-item:hover .comment-actions{opacity:1}
+.comment-action-btn{font-size:11px;color:var(--text3);cursor:pointer;background:none;border:none;font-family:var(--font-mono);padding:0}
+.comment-action-btn:hover{color:var(--text)}
+.comment-input-wrap{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.comment-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;color:var(--text);font-family:var(--font-sans);font-size:13px;outline:none;resize:none;min-height:36px;max-height:120px}
+.comment-input:focus{border-color:var(--accent)}
+
+/* ── MEMBERS MODAL ── */
+.member-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.member-row:last-child{border-bottom:none}
+.member-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:var(--font-mono);overflow:hidden;background:var(--surface3);flex-shrink:0}
+.member-av img{width:100%;height:100%;object-fit:cover}
+.member-info{flex:1;min-width:0}
+.member-name{font-size:13px;font-weight:500}
+.member-email{font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.member-role{font-size:10px;font-family:var(--font-mono);padding:2px 8px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em;background:var(--surface3);color:var(--text3)}
+.member-role.owner{background:var(--accent-dim);color:var(--accent)}
+.member-role.admin{background:var(--purple-dim);color:var(--purple)}
+.member-role.member{background:var(--blue-dim);color:var(--blue)}
+.member-role.viewer{background:var(--surface3);color:var(--text3)}
+.member-online{width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0}
+.invite-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-top:12px}
+.invite-link-box{display:flex;align-items:center;gap:8px;background:var(--surface3);border-radius:var(--r-sm);padding:8px 10px;margin-top:10px}
+.invite-link-text{flex:1;font-size:11px;font-family:var(--font-mono);color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pending-invite-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
+.pending-invite-row:last-child{border-bottom:none}
+
+/* ── ACTIVITY FEED ── */
+.activity-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.activity-icon-wrap{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:var(--surface3)}
+.activity-body{flex:1;min-width:0}
+.activity-text{font-size:12px;color:var(--text2);line-height:1.4}
+.activity-text strong{color:var(--text);font-weight:500}
+.activity-time{font-size:10px;color:var(--text3);font-family:var(--font-mono);margin-top:2px}
+
+/* ── STATS VIEW ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stats-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px}
+.stats-card-label{font-size:10px;font-family:var(--font-mono);color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
+.stats-card-value{font-size:26px;font-weight:700;font-family:var(--font-mono);letter-spacing:-0.03em;color:var(--text)}
+.stats-card-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-chart-row{display:flex;align-items:center;gap:8px}
+.bar-chart-label{font-size:11px;font-family:var(--font-mono);color:var(--text2);width:70px;flex-shrink:0;text-align:right}
+.bar-chart-track{flex:1;height:8px;background:var(--surface3);border-radius:4px;overflow:hidden}
+.bar-chart-fill{height:100%;border-radius:4px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1)}
+.bar-chart-count{font-size:11px;font-family:var(--font-mono);color:var(--text3);width:24px}
+
+/* ── PROFILE MODAL ── */
+.profile-av-section{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.profile-av-large{width:80px;height:80px;border-radius:50%;background:var(--accent);color:var(--accent-text);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;font-family:var(--font-mono);overflow:hidden;cursor:pointer;position:relative;border:2px solid var(--border2);transition:border-color var(--transition)}
+.profile-av-large:hover{border-color:var(--accent)}
+.profile-av-large img{width:100%;height:100%;object-fit:cover}
+.profile-av-large::after{content:'📷';position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:22px;opacity:0;transition:opacity var(--transition);border-radius:50%}
+.profile-av-large:hover::after{opacity:1}
+.profile-av-hint{font-size:11px;color:var(--text3)}
+
+/* ══ CONTEXT MENU ═════════════════════════════════════════ */
+.ctx-menu{position:fixed;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:6px;min-width:180px;box-shadow:var(--shadow);z-index:500;display:none;animation:dropIn 0.12s ease}
+.ctx-menu.open{display:block}
+.ctx-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-sm);font-size:13px;cursor:pointer;color:var(--text2);transition:background var(--transition),color var(--transition)}
+.ctx-item:hover{background:var(--surface3);color:var(--text)}
+.ctx-item.danger:hover{background:var(--red-dim);color:var(--red)}
+.ctx-sep{height:1px;background:var(--border);margin:4px 0}
+
+/* ══ SEARCH BAR ═══════════════════════════════════════════ */
+.search-wrap{position:relative}
+.search-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 10px 6px 30px;color:var(--text);font-family:var(--font-sans);font-size:12px;outline:none;width:180px;transition:border-color var(--transition),width var(--transition)}
+.search-input:focus{border-color:var(--accent);width:220px}
+.search-input::placeholder{color:var(--text3)}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
+
+/* ══ TOASTS ═══════════════════════════════════════════════ */
+#toast-container{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 18px;font-size:13px;color:var(--text);box-shadow:var(--shadow);animation:toastIn 0.2s ease;display:flex;align-items:center;gap:8px;white-space:nowrap;pointer-events:all}
+.toast.success{border-color:rgba(200,255,87,0.3)}
+.toast.error{border-color:rgba(255,79,79,0.3);color:var(--red)}
+.toast.info{border-color:rgba(79,168,255,0.3);color:var(--blue)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══ KBD PANEL ════════════════════════════════════════════ */
+.kbd-panel{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;font-size:11px;color:var(--text3);z-index:100;display:none;min-width:200px}
+.kbd-panel.open{display:block;animation:dropIn 0.15s ease}
+.kbd-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.kbd-row:last-child{margin-bottom:0}
+kbd{font-family:var(--font-mono);font-size:10px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;color:var(--text2)}
+
+/* ══ WS STATUS ════════════════════════════════════════════ */
+.ws-status{display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--font-mono);color:var(--text3)}
+.ws-dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+.ws-dot.connected{background:var(--teal);animation:blink 3s ease-in-out infinite}
+.ws-dot.connecting{background:var(--amber);animation:blink 1s ease-in-out infinite}
+.ws-dot.error{background:var(--red)}
+
+/* skeleton loader */
+.skeleton{background:var(--surface3);border-radius:4px;animation:shimmer 1.5s infinite}
+@keyframes shimmer{0%,100%{opacity:0.4}50%{opacity:0.8}}
+
+/* misc */
+.color-badge{display:inline-block;width:8px;height:8px;border-radius:50%}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.section-title{font-size:11px;font-weight:600;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em;color:var(--text3)}
+</style>
+</head>
+<body>
+
+<!-- ══ LOADING ══ -->
+<div id="loading-screen">
+  <div class="loading-logo">
+    <svg viewBox="0 0 26 26" fill="none">
+      <rect x="2" y="2" width="10" height="10" rx="2" fill="#0f1a00"/>
+      <rect x="14" y="2" width="10" height="10" rx="2" fill="#0f1a00" opacity=".6"/>
+      <rect x="2" y="14" width="10" height="10" rx="2" fill="#0f1a00" opacity=".6"/>
+      <rect x="14" y="14" width="10" height="10" rx="2" fill="#0f1a00" opacity=".3"/>
+    </svg>
+  </div>
+  <span class="loading-text">COLLABBOARD</span>
+</div>
+
+<!-- ══ AUTH SCREEN ══ -->
+<div id="auth-screen">
+  <div class="auth-bg"></div>
+
+  <!-- LOGIN -->
+  <div class="auth-card" id="auth-login-card">
+    <div class="auth-logo">
+      <div class="auth-logo-mark">
+        <svg viewBox="0 0 18 18" fill="none">
+          <rect x="2" y="2" width="6" height="6" rx="1.5" fill="#0f1a00"/>
+          <rect x="10" y="2" width="6" height="6" rx="1.5" fill="#0f1a00" opacity=".6"/>
+          <rect x="2" y="10" width="6" height="6" rx="1.5" fill="#0f1a00" opacity=".6"/>
+          <rect x="10" y="10" width="6" height="6" rx="1.5" fill="#0f1a00" opacity=".3"/>
+        </svg>
+      </div>
+      <span class="auth-logo-name">CollabBoard</span>
+    </div>
+    <div class="auth-title">Welcome back</div>
+    <div class="auth-sub">Sign in to your workspace</div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" type="email" id="login-email" placeholder="you@company.com" autocomplete="email"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"/>
+      <div class="form-error" id="login-error"></div>
+    </div>
+    <button class="auth-btn" id="login-btn" onclick="doLogin()">Sign in →</button>
+    <div class="auth-switch">Don't have an account? <a onclick="showRegister()">Create one</a></div>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="auth-card hidden" id="auth-register-card">
+    <div class="auth-logo">
+      <div class="auth-logo-mark">
+        <svg viewBox="0 0 18 18" fill="none">
+          <rect x="2" y="2" width="6" height="6" rx="1.5" fill="#0f1a00"/>
+          <rect x="10" y="2" width="6" height="6" rx="1.5" fill="#0f1a00" opacity=".6"/>
+          <rect x="2" y="10" width="6" height="6" rx="1.5" fill="#0f1a00" opacity=".6"/>
+          <rect x="10" y="10" width="6" height="6" rx="1.5" fill="#0f1a00" opacity=".3"/>
+        </svg>
+      </div>
+      <span class="auth-logo-name">CollabBoard</span>
+    </div>
+    <div class="auth-title">Create your account</div>
+    <div class="auth-sub">Start collaborating in seconds</div>
+    <div class="avatar-upload-wrap">
+      <div class="avatar-preview" id="reg-avatar-preview" onclick="document.getElementById('reg-avatar-file').click()">
+        <span id="reg-avatar-emoji">🖼️</span>
+      </div>
+      <span class="avatar-preview-hint">Click to add a profile photo</span>
+      <input type="file" id="reg-avatar-file" accept="image/*" onchange="handleRegAvatarUpload(event)" style="display:none"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Full Name</label>
+      <input class="form-input" type="text" id="reg-name" placeholder="Alex Johnson" autocomplete="name"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" type="email" id="reg-email" placeholder="you@company.com" autocomplete="email"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" type="password" id="reg-password" placeholder="Min. 6 characters" autocomplete="new-password"/>
+      <div class="form-error" id="reg-error"></div>
+    </div>
+    <button class="auth-btn" id="register-btn" onclick="doRegister()">Create Account →</button>
+    <div class="auth-switch">Already have an account? <a onclick="showLogin()">Sign in</a></div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="app-screen">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <a class="logo" onclick="goHome()">
+        <div class="logo-mark">
+          <svg viewBox="0 0 14 14" fill="none">
+            <rect x="1" y="1" width="5" height="5" rx="1" fill="#0f1a00"/>
+            <rect x="8" y="1" width="5" height="5" rx="1" fill="#0f1a00" opacity=".6"/>
+            <rect x="1" y="8" width="5" height="5" rx="1" fill="#0f1a00" opacity=".6"/>
+            <rect x="8" y="8" width="5" height="5" rx="1" fill="#0f1a00" opacity=".3"/>
+          </svg>
+        </div>
+        <span class="logo-name">CollabBoard</span>
+      </a>
+      <div class="topbar-breadcrumb hidden" id="topbar-breadcrumb">
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-project" id="breadcrumb-name">Project</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <!-- WS status -->
+      <div class="ws-status" id="ws-status" title="Connection status">
+        <div class="ws-dot connecting" id="ws-dot"></div>
+      </div>
+      <!-- Online presence -->
+      <div class="online-presence" id="online-presence" style="display:none"></div>
+      <!-- Notifications -->
+      <div style="position:relative">
+        <div class="notif-bell" id="notif-bell" onclick="toggleNotifDropdown()">
+          🔔
+          <span class="notif-badge" id="notif-badge"></span>
+        </div>
+        <div class="notif-dropdown" id="notif-dropdown">
+          <div class="notif-header">
+            <span class="notif-title">Notifications</span>
+            <span class="notif-mark-all" onclick="markAllNotifRead()">Mark all read</span>
+          </div>
+          <div class="notif-list" id="notif-list">
+            <div class="notif-empty">No notifications yet</div>
+          </div>
+        </div>
+      </div>
+      <!-- User chip -->
+      <div class="user-chip" id="user-chip" onclick="toggleUserDropdown()">
+        <div class="user-avatar" id="topbar-avatar">?</div>
+        <span class="user-name" id="topbar-username">User</span>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="color:var(--text3);flex-shrink:0">
+          <path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <div class="user-dropdown" id="user-dropdown">
+          <div class="dropdown-header">
+            <div class="dropdown-user-name" id="dd-name">—</div>
+            <div class="dropdown-user-email" id="dd-email">—</div>
+          </div>
+          <div class="dropdown-item" onclick="openProfileModal()"><span class="dropdown-icon">✏️</span>Edit Profile</div>
+          <div class="dropdown-item" onclick="goHome()"><span class="dropdown-icon">🏠</span>All Projects</div>
+          <div class="dropdown-item" onclick="openShortcutsPanel()"><span class="dropdown-icon">⌨️</span>Keyboard Shortcuts</div>
+          <div class="dropdown-sep"></div>
+          <div class="dropdown-item danger" onclick="doLogout()"><span class="dropdown-icon">🚪</span>Sign out</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJECTS HUB -->
+  <div id="projects-hub">
+    <div class="hub-header">
+      <div>
+        <div class="hub-title">Your Projects</div>
+        <div class="hub-subtitle" id="hub-subtitle">Select a workspace to continue</div>
+      </div>
+      <button class="btn btn-primary" onclick="openNewProjectModal()">＋ New Project</button>
+    </div>
+    <div id="projects-grid" class="projects-grid"></div>
+  </div>
+
+  <!-- BOARD SCREEN -->
+  <div id="board-screen">
+    <div class="board-toolbar">
+      <div class="board-toolbar-left">
+        <button class="btn btn-ghost btn-sm" onclick="goHome()" style="padding-left:4px">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Projects
+        </button>
+        <div style="width:1px;height:16px;background:var(--border)"></div>
+        <button class="filter-chip active" data-filter="all" onclick="setFilter('all',this)">All</button>
+        <button class="filter-chip" data-filter="high" onclick="setFilter('high',this)">🔴 High</button>
+        <button class="filter-chip" data-filter="mine" onclick="setFilter('mine',this)">👤 Mine</button>
+        <button class="filter-chip" data-filter="overdue" onclick="setFilter('overdue',this)">⏰ Overdue</button>
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" placeholder="Search tasks… (/)" id="search-input" oninput="renderBoard()"/>
+        </div>
+      </div>
+      <div class="board-toolbar-right">
+        <div class="stats-pills">
+          <div class="stat-pill">Tasks <strong id="total-count">0</strong></div>
+          <div class="stat-pill">Done <strong id="done-count">0</strong></div>
+        </div>
+        <button class="btn btn-sm" onclick="openActivityModal()" title="Activity feed">📋 Activity</button>
+        <button class="btn btn-sm" onclick="openMembersModal()" title="Team members">👥 Team</button>
+        <button class="btn btn-sm" onclick="openStatsModal()" title="Project stats">📊 Stats</button>
+        <button class="btn btn-primary btn-sm" onclick="openTaskModal()">＋ Task</button>
+        <button class="btn btn-sm" onclick="openProjectSettingsModal()" title="Project settings">⚙️</button>
+      </div>
+    </div>
+    <div class="board-area">
+      <div class="column col-todo" id="col-wrap-todo">
+        <div class="col-header">
+          <div class="col-title-wrap"><div class="col-indicator"></div><div class="col-label">To Do</div></div>
+          <div class="col-count" id="count-todo">0</div>
+        </div>
+        <div class="col-body" id="col-todo"
+          ondragover="onDragOver(event,'todo')" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'todo')"></div>
+        <button class="col-add-btn" onclick="openTaskModal('todo')"><span>＋</span>Add task</button>
+      </div>
+      <div class="column col-inprog" id="col-wrap-inprog">
+        <div class="col-header">
+          <div class="col-title-wrap"><div class="col-indicator"></div><div class="col-label">In Progress</div></div>
+          <div class="col-count" id="count-inprog">0</div>
+        </div>
+        <div class="col-body" id="col-inprog"
+          ondragover="onDragOver(event,'inprog')" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'inprog')"></div>
+        <button class="col-add-btn" onclick="openTaskModal('inprog')"><span>＋</span>Add task</button>
+      </div>
+      <div class="column col-review" id="col-wrap-review">
+        <div class="col-header">
+          <div class="col-title-wrap"><div class="col-indicator"></div><div class="col-label">Review</div></div>
+          <div class="col-count" id="count-review">0</div>
+        </div>
+        <div class="col-body" id="col-review"
+          ondragover="onDragOver(event,'review')" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'review')"></div>
+        <button class="col-add-btn" onclick="openTaskModal('review')"><span>＋</span>Add task</button>
+      </div>
+      <div class="column col-done" id="col-wrap-done">
+        <div class="col-header">
+          <div class="col-title-wrap"><div class="col-indicator"></div><div class="col-label">Done</div></div>
+          <div class="col-count" id="count-done">0</div>
+        </div>
+        <div class="col-body" id="col-done"
+          ondragover="onDragOver(event,'done')" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'done')"></div>
+        <button class="col-add-btn" onclick="openTaskModal('done')"><span>＋</span>Add task</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODALS ══════ -->
+
+<!-- Task Create/Edit Modal -->
+<div class="modal-overlay" id="task-modal" onclick="if(event.target===this)closeTaskModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="task-modal-title">New Task</div>
+      <button class="modal-close" onclick="closeTaskModal()">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Task Title *</label>
+      <input class="form-input" id="task-title" placeholder="Describe the task…"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea class="form-input" id="task-desc" placeholder="More details…" rows="2"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tags</label>
+      <div class="tag-picker" id="tag-picker"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Priority</label>
+      <div class="picker-row" id="priority-picker">
+        <button class="picker-opt" onclick="setPriority('low',this)">🟢 Low</button>
+        <button class="picker-opt selected" onclick="setPriority('medium',this)">🟡 Medium</button>
+        <button class="picker-opt" onclick="setPriority('high',this)">🔴 High</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <div class="picker-row" id="col-picker">
+        <button class="picker-opt selected" onclick="setColPick('todo',this)">To Do</button>
+        <button class="picker-opt" onclick="setColPick('inprog',this)">In Progress</button>
+        <button class="picker-opt" onclick="setColPick('review',this)">Review</button>
+        <button class="picker-opt" onclick="setColPick('done',this)">Done</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Assignee</label>
+      <select class="form-input" id="task-assignee"><option value="">Unassigned</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Due Date</label>
+      <input class="form-input" type="date" id="task-due"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Estimated Hours</label>
+      <input class="form-input" type="number" id="task-hours" placeholder="e.g. 4" min="0" step="0.5"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeTaskModal()">Cancel</button>
+      <button class="btn btn-primary" id="task-save-btn" onclick="saveTask()">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task Detail Modal -->
+<div class="modal-overlay" id="task-detail-modal" onclick="if(event.target===this)closeTaskDetail()">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="modal-title" id="td-project-name" style="color:var(--text3);font-weight:400"></div>
+        <span style="color:var(--border2)">›</span>
+        <div class="modal-title" id="td-status-badge"></div>
+      </div>
+      <button class="modal-close" onclick="closeTaskDetail()">×</button>
+    </div>
+    <div class="modal-tabs">
+      <div class="modal-tab active" onclick="switchTaskTab('details',this)">Details</div>
+      <div class="modal-tab" onclick="switchTaskTab('checklist',this)">Checklist <span id="td-checklist-count" style="font-size:10px;opacity:0.6"></span></div>
+      <div class="modal-tab" onclick="switchTaskTab('comments',this)">Comments <span id="td-comment-count" style="font-size:10px;opacity:0.6"></span></div>
+    </div>
+    <!-- Details tab -->
+    <div id="task-tab-details">
+      <div class="task-detail-header">
+        <input class="task-detail-title-input" id="td-title" placeholder="Task title…" onblur="updateTaskField('title',this.value)"/>
+      </div>
+      <div class="task-detail-meta">
+        <div>
+          <div class="task-meta-label">Priority</div>
+          <div class="task-meta-val" id="td-priority"></div>
+        </div>
+        <div>
+          <div class="task-meta-label">Assignee</div>
+          <select class="form-input" id="td-assignee" style="padding:2px 24px 2px 6px;font-size:12px;height:28px" onchange="updateTaskField('assignee_id',this.value)">
+            <option value="">Unassigned</option>
+          </select>
+        </div>
+        <div>
+          <div class="task-meta-label">Due Date</div>
+          <input type="date" class="form-input" id="td-due" style="padding:2px 8px;font-size:12px;height:28px" onchange="updateTaskField('due_date',this.value)"/>
+        </div>
+        <div>
+          <div class="task-meta-label">Est. Hours</div>
+          <input type="number" class="form-input" id="td-hours" style="padding:2px 8px;font-size:12px;height:28px;width:70px" min="0" step="0.5" onblur="updateTaskField('estimated_hours',this.value)"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="td-desc" rows="3" onblur="updateTaskField('description',this.value)"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tags</label>
+        <div class="tag-picker" id="td-tag-picker"></div>
+      </div>
+    </div>
+    <!-- Checklist tab -->
+    <div id="task-tab-checklist" style="display:none">
+      <div class="checklist-progress">
+        <div class="checklist-progress-bar"><div class="checklist-progress-fill" id="cl-progress-fill" style="width:0%"></div></div>
+        <span style="font-size:11px;font-family:var(--font-mono);color:var(--text3)" id="cl-progress-text">0 / 0</span>
+      </div>
+      <div class="checklist-wrap" id="checklist-items"></div>
+      <div class="checklist-add">
+        <input id="checklist-new-input" placeholder="Add an item…" onkeydown="if(event.key==='Enter')addChecklistItem()"/>
+        <button class="btn btn-sm btn-primary" onclick="addChecklistItem()">Add</button>
+      </div>
+    </div>
+    <!-- Comments tab -->
+    <div id="task-tab-comments" style="display:none">
+      <div class="comments-list" id="comments-list">
+        <div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">No comments yet</div>
+      </div>
+      <div class="comment-input-wrap">
+        <div class="comment-av" id="comment-input-av"></div>
+        <textarea class="comment-input" id="comment-input" placeholder="Write a comment… (Ctrl+Enter to submit)" rows="1"
+          onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter')submitComment()"
+          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="submitComment()">Send</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger btn-sm" onclick="deleteTaskFromDetail()">🗑 Delete</button>
+      <button class="btn btn-sm" onclick="closeTaskDetail()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Project Modal -->
+<div class="modal-overlay" id="new-project-modal" onclick="if(event.target===this)closeNewProjectModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Project</div>
+      <button class="modal-close" onclick="closeNewProjectModal()">×</button>
+    </div>
+    <div class="form-group" style="text-align:center;margin-bottom:10px">
+      <div style="font-size:36px;margin-bottom:8px" id="np-icon-preview">📋</div>
+      <label class="form-label">Icon</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px" id="icon-picker">
+        <span class="icon-opt" onclick="selectIcon('📋',this)" style="cursor:pointer;font-size:22px;padding:4px;border-radius:6px;border:2px solid var(--accent)">📋</span>
+        <span class="icon-opt" onclick="selectIcon('🚀',this)" style="cursor:pointer;font-size:22px;padding:4px;border-radius:6px;border:2px solid transparent">🚀</span>
+        <span class="icon-opt" onclick="selectIcon('💡',this)" style="cursor:pointer;font-size:22px;padding:4px;border-radius:6px;border:2px solid transparent">💡</span>
+        <span class="icon-opt" onclick="selectIcon('🔧',this)" style="cursor:pointer;font-size:22px;padding:4px;border-radius:6px;border:2px solid transparent">🔧</span>
+        <span class="icon-opt" onclick="selectIcon('🎨',this)" style="cursor:pointer;font-size:22px;padding:4px;border-radius:6px;border:2px solid transparent">🎨</span>
+        <span class="icon-opt" onclick="selectIcon('📊',this)" style="cursor:pointer;font-size:22px;padding:4px;border-radius:6px;border:2px solid transparent">📊</span>
+        <span class="icon-opt" onclick="selectIcon('🌿',this)" style="cursor:pointer;font-size:22px;padding:4px;border-radius:6px;border:2px solid transparent">🌿</span>
+        <span class="icon-opt" onclick="selectIcon('⚡',this)" style="cursor:pointer;font-size:22px;padding:4px;border-radius:6px;border:2px solid transparent">⚡</span>
+        <span class="icon-opt" onclick="selectIcon('🔬',this)" style="cursor:pointer;font-size:22px;padding:4px;border-radius:6px;border:2px solid transparent">🔬</span>
+        <span class="icon-opt" onclick="selectIcon('🎯',this)" style="cursor:pointer;font-size:22px;padding:4px;border-radius:6px;border:2px solid transparent">🎯</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Project Name *</label>
+      <input class="form-input" id="np-name" placeholder="e.g. Product Redesign"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <input class="form-input" id="np-desc" placeholder="Short description…"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Color</label>
+      <div class="swatch-row" id="swatch-row">
+        <div class="swatch selected" style="background:#c8ff57" data-color="#c8ff57" onclick="selectSwatch(this,'np')"></div>
+        <div class="swatch" style="background:#4fa8ff" data-color="#4fa8ff" onclick="selectSwatch(this,'np')"></div>
+        <div class="swatch" style="background:#b47dff" data-color="#b47dff" onclick="selectSwatch(this,'np')"></div>
+        <div class="swatch" style="background:#ff4f4f" data-color="#ff4f4f" onclick="selectSwatch(this,'np')"></div>
+        <div class="swatch" style="background:#ffb347" data-color="#ffb347" onclick="selectSwatch(this,'np')"></div>
+        <div class="swatch" style="background:#3de0c6" data-color="#3de0c6" onclick="selectSwatch(this,'np')"></div>
+        <div class="swatch" style="background:#e88cce" data-color="#e88cce" onclick="selectSwatch(this,'np')"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeNewProjectModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createProject()">Create Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- Project Settings Modal -->
+<div class="modal-overlay" id="proj-settings-modal" onclick="if(event.target===this)closeProjSettingsModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Project Settings</div>
+      <button class="modal-close" onclick="closeProjSettingsModal()">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Project Name</label>
+      <input class="form-input" id="ps-name"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <input class="form-input" id="ps-desc"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Color</label>
+      <div class="swatch-row" id="ps-swatch-row">
+        <div class="swatch selected" style="background:#c8ff57" data-color="#c8ff57" onclick="selectSwatch(this,'ps')"></div>
+        <div class="swatch" style="background:#4fa8ff" data-color="#4fa8ff" onclick="selectSwatch(this,'ps')"></div>
+        <div class="swatch" style="background:#b47dff" data-color="#b47dff" onclick="selectSwatch(this,'ps')"></div>
+        <div class="swatch" style="background:#ff4f4f" data-color="#ff4f4f" onclick="selectSwatch(this,'ps')"></div>
+        <div class="swatch" style="background:#ffb347" data-color="#ffb347" onclick="selectSwatch(this,'ps')"></div>
+        <div class="swatch" style="background:#3de0c6" data-color="#3de0c6" onclick="selectSwatch(this,'ps')"></div>
+        <div class="swatch" style="background:#e88cce" data-color="#e88cce" onclick="selectSwatch(this,'ps')"></div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div id="ps-members-section"></div>
+    <div class="divider"></div>
+    <button class="btn btn-danger w-full" style="justify-content:center" onclick="deleteCurrentProject()" id="ps-delete-btn">🗑 Delete this project</button>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeProjSettingsModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProjSettings()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Members Modal -->
+<div class="modal-overlay" id="members-modal" onclick="if(event.target===this)closeMembersModal()">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <div class="modal-title">👥 Team Members</div>
+      <button class="modal-close" onclick="closeMembersModal()">×</button>
+    </div>
+    <div id="members-list"></div>
+    <div class="divider"></div>
+    <div class="invite-box" id="invite-box">
+      <div class="section-header"><span class="section-title">Invite a teammate</span></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="form-input" id="invite-email" placeholder="colleague@company.com" style="flex:1"/>
+        <select class="form-input" id="invite-role" style="width:110px">
+          <option value="member">Member</option>
+          <option value="admin">Admin</option>
+          <option value="viewer">Viewer</option>
+        </select>
+        <button class="btn btn-primary" onclick="sendInvite()">Invite</button>
+      </div>
+      <div id="invite-result" style="margin-top:10px"></div>
+    </div>
+    <div class="divider"></div>
+    <div id="pending-invites-section"></div>
+  </div>
+</div>
+
+<!-- Activity Modal -->
+<div class="modal-overlay" id="activity-modal" onclick="if(event.target===this)closeActivityModal()">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <div class="modal-title">📋 Activity Feed</div>
+      <button class="modal-close" onclick="closeActivityModal()">×</button>
+    </div>
+    <div id="activity-list" style="max-height:480px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- Stats Modal -->
+<div class="modal-overlay" id="stats-modal" onclick="if(event.target===this)closeStatsModal()">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <div class="modal-title">📊 Project Analytics</div>
+      <button class="modal-close" onclick="closeStatsModal()">×</button>
+    </div>
+    <div id="stats-content"></div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profile-modal" onclick="if(event.target===this)closeProfileModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Profile</div>
+      <button class="modal-close" onclick="closeProfileModal()">×</button>
+    </div>
+    <div class="profile-av-section">
+      <div class="profile-av-large" id="profile-av-large" onclick="document.getElementById('profile-av-file').click()">?</div>
+      <span class="profile-av-hint">Click to change photo (max 5MB)</span>
+      <input type="file" id="profile-av-file" accept="image/*" onchange="handleProfileAvatarUpload(event)" style="display:none"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Display Name</label>
+      <input class="form-input" id="profile-name"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Bio</label>
+      <input class="form-input" id="profile-bio" placeholder="Tell your team about yourself…"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email (read-only)</label>
+      <input class="form-input" id="profile-email" disabled style="opacity:0.5"/>
+    </div>
+    <div class="divider"></div>
+    <div class="form-group">
+      <label class="form-label">Current Password (required to change password)</label>
+      <input class="form-input" type="password" id="profile-curpass" placeholder="••••••••"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">New Password</label>
+      <input class="form-input" type="password" id="profile-newpass" placeholder="••••••••"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeProfileModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONTEXT MENU ══ -->
+<div class="ctx-menu" id="ctx-menu"></div>
+
+<!-- ══ KBD SHORTCUTS ══ -->
+<div class="kbd-panel" id="kbd-panel">
+  <div style="font-size:11px;font-weight:600;margin-bottom:10px;color:var(--text)">Keyboard Shortcuts</div>
+  <div class="kbd-row"><kbd>N</kbd><span>New Task</span></div>
+  <div class="kbd-row"><kbd>P</kbd><span>New Project</span></div>
+  <div class="kbd-row"><kbd>H</kbd><span>Home / Hub</span></div>
+  <div class="kbd-row"><kbd>/</kbd><span>Search</span></div>
+  <div class="kbd-row"><kbd>M</kbd><span>Members</span></div>
+  <div class="kbd-row"><kbd>A</kbd><span>Activity</span></div>
+  <div class="kbd-row"><kbd>?</kbd><span>Toggle shortcuts</span></div>
+  <div class="kbd-row"><kbd>Esc</kbd><span>Close modal</span></div>
+  <div style="margin-top:10px"><button class="btn btn-sm" onclick="closeShortcutsPanel()">Close</button></div>
+</div>
+
+<!-- ══ TOAST CONTAINER ══ -->
+<div id="toast-container"></div>
+<script src="app.js"></script>
